@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use LivestockSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -26,7 +27,6 @@ class DatabaseSeeder extends Seeder
             SensorSeeder::class,
             ActuatorSeeder::class,
             ActivitySeeder::class,
-            MeasurementSeeder::class,
         ]);
     }
 }
