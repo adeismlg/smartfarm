@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('livestock', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // Nama hewan
-            $table->integer('quantity'); // Jumlah hewan
-            $table->string('breed')->nullable(); // Ras hewan
-            $table->timestamps();
+        Schema::table('sensor_readings', function (Blueprint $table) {
+            $table->timestamp('measurement_time')->nullable()->after('value'); // Menambah kolom measurement_time
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('livestocks');
+        Schema::table('sensor_readings', function (Blueprint $table) {
+            //
+        });
     }
 };

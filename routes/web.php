@@ -19,5 +19,6 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/filament/monitor/data', [Monitor::class, 'getSensorData'])->name('filament.monitor.data');
+Route::get('/monitor/real-time-data', [Monitor::class, 'getRealTimeData']);
 
 require __DIR__.'/auth.php';
