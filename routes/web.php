@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Filament\Pages\Monitor;
 
+
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -20,5 +22,6 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/filament/monitor/data', [Monitor::class, 'getSensorData'])->name('filament.monitor.data');
 Route::get('/monitor/real-time-data', [Monitor::class, 'getRealTimeData']);
+
 
 require __DIR__.'/auth.php';

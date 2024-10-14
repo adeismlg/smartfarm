@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class SensorResource extends Resource
 {
     protected static ?string $model = Sensor::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-c-rss';
 
     public static function form(Form $form): Form
     {

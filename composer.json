@@ -7,9 +7,11 @@
     "require": {
         "php": "^8.2",
         "bezhansalleh/filament-shield": "^3.2",
+        "blade-ui-kit/blade-heroicons": "^2.4",
         "filament/filament": "^3.2",
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
+        "maatwebsite/excel": "^3.1",
         "php-mqtt/laravel-client": "^1.5"
     },
     "require-dev": {

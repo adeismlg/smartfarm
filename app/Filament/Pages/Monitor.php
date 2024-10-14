@@ -12,6 +12,10 @@ class Monitor extends Page
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
     protected static string $view = 'filament.pages.monitor';
 
+    protected static ?string $navigationLabel = 'Monitoring Data';
+    protected static ?string $navigationGroup = 'Data Monitoring';
+    
+
     public $sensorData; // Variabel untuk menyimpan data sensor
 
     public function mount()

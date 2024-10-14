@@ -15,56 +15,54 @@ class SensorReadingSeeder extends Seeder
         $sensors = Sensor::orderBy('id', 'asc')->get(); // Mengambil sensor berurutan berdasarkan ID
         $startDate = Carbon::create(2024, 6, 1, 7, 0, 0); // Mulai dari 1 Juni 2024 pukul 07:00 pagi
         $endDate = $startDate->copy()->addDays(40); // Data selama 40 hari ke depan
-        $interval = 12; // Data setiap 12 detik (untuk 5 data per menit)
-
-        // Indeks untuk mengelola urutan sensor
-        $sensorIndex = 0;
+        $interval = 10 * 60; // Data setiap 10 menit (dalam detik)
 
         $currentDate = $startDate->copy();
 
         // Loop hingga akhir periode data yang didefinisikan
         while ($currentDate->lessThanOrEqualTo($endDate)) {
-            // Mengambil sensor berdasarkan urutan index yang bergantian
-            $sensor = $sensors[$sensorIndex % $sensors->count()];
+            // Menghitung umur ayam dalam hari
+            $ageInDays = $currentDate->diffInDays($startDate);
 
-            // Menghasilkan data dummy berdasarkan jenis sensor dan waktu
-            $value = $this->generateSensorValue($sensor->type, $currentDate);
+            // Loop untuk setiap sensor dan mengirimkan data secara bersamaan
+            foreach ($sensors as $sensor) {
+                // Menghasilkan data dummy berdasarkan jenis sensor dan umur ayam
+                $value = $this->generateSensorValue($sensor->type, $currentDate, $ageInDays);
 
-            // Membuat record untuk pembacaan sensor dengan menambahkan 'measurement_time'
-            SensorReading::create([
-                'sensor_id' => $sensor->id,
-                'value' => $value,
-                'measurement_time' => $currentDate, // Waktu pengukuran
-                'created_at' => $currentDate,
-                'updated_at' => $currentDate,
-            ]);
+                // Membuat record untuk pembacaan sensor dengan menambahkan 'measurement_time'
+                SensorReading::create([
+                    'sensor_id' => $sensor->id,
+                    'value' => $value,
+                    'measurement_time' => $currentDate, // Waktu pengukuran yang sama untuk semua sensor
+                    'created_at' => $currentDate,
+                    'updated_at' => $currentDate,
+                ]);
+            }
 
-            // Pindah ke sensor berikutnya dalam urutan
-            $sensorIndex++;
-
-            // Tambahkan interval waktu (12 detik)
+            // Tambahkan interval waktu (10 menit) sebelum pengiriman data berikutnya
             $currentDate->addSeconds($interval);
         }
     }
 
     /**
-     * Generate nilai sensor berdasarkan tipe sensor dan waktu tertentu
+     * Generate nilai sensor berdasarkan tipe sensor, waktu, dan umur ayam
      *
      * @param string $sensorType
      * @param Carbon $currentDate
+     * @param int $ageInDays
      * @return float
      */
-    private function generateSensorValue($sensorType, $currentDate)
+    private function generateSensorValue($sensorType, $currentDate, $ageInDays)
     {
         switch (strtolower($sensorType)) {
             case 'temperature':
-                return $this->generateTemperatureValue($currentDate);
+                return $this->generateTemperatureValue($currentDate, $ageInDays);
             case 'humidity':
                 return $this->generateHumidityValue($currentDate);
             case 'lux':
                 return $this->generateLuxValue($currentDate);
-            case 'amonia': // Mengganti dari ammonia menjadi amonia
-                return $this->generateAmoniaValue($currentDate);
+            case 'amonia':
+                return $this->generateAmoniaValue($currentDate, $ageInDays);
             case 'wind speed':
                 return $this->generateWindSpeedValue($currentDate);
             default:
@@ -73,39 +71,32 @@ class SensorReadingSeeder extends Seeder
     }
 
     /**
-     * Generate nilai suhu (temperature) dengan pola harian dan musiman yang lebih natural
+     * Generate nilai suhu (temperature) dengan rentang 24°C - 29°C yang bergantung pada umur ayam
      *
      * @param Carbon $currentDate
+     * @param int $ageInDays
      * @return float
      */
-    private function generateTemperatureValue($currentDate)
+    private function generateTemperatureValue($currentDate, $ageInDays)
     {
-        $month = $currentDate->month;
         $hour = $currentDate->hour;
+        $minute = $currentDate->minute;
 
-        // Pola musiman suhu, lebih halus dengan variasi kecil per bulan
-        $baseTemp = 25; // Suhu dasar
-        if ($month >= 6 && $month <= 8) {
-            // Musim dingin: lebih rendah di kisaran 22°C - 26°C
-            $baseTemp = 24 + sin(deg2rad(($month - 6) * 30)) * 1.5; // Smoothing musiman
-        } elseif ($month >= 9 && $month <= 11) {
-            // Musim panas: lebih tinggi di kisaran 28°C - 32°C
-            $baseTemp = 30 + sin(deg2rad(($month - 9) * 30)) * 1.5;
-        } else {
-            // Musim hangat: bulan lainnya
-            $baseTemp = 26 + sin(deg2rad(($month - 3) * 30)) * 1.5;
-        }
+        // Rentang suhu yang bergantung pada umur ayam
+        $minTemp = 24; // Suhu terendah
+        $maxTemp = 29; // Suhu tertinggi
 
-        // Pengaruh waktu hari, lebih halus pada malam hari
-        if ($hour < 6 || $hour > 18) {
-            $baseTemp -= 1.5; // Suhu turun pada malam hari secara halus
-        }
+        // Perubahan suhu berdasarkan umur ayam (semakin tinggi seiring bertambahnya usia)
+        $tempByAge = $minTemp + ($maxTemp - $minTemp) * ($ageInDays / 40); // Linear increase by age
 
-        return round($baseTemp + rand(-0.5, 0.5), 1); // Variasi kecil untuk membuat lebih natural
+        // Pola suhu harian (naik di siang hari, turun di malam hari)
+        $dailyVariation = sin(deg2rad(($hour * 60 + $minute) * (180 / (24 * 60)))) * 1.5;
+
+        return round($tempByAge + $dailyVariation + rand(-0.2, 0.2), 1); // Variasi kecil untuk membuatnya lebih natural
     }
 
     /**
-     * Generate nilai kelembaban (humidity) dengan pola harian dan musiman yang lebih landai
+     * Generate nilai kelembaban (humidity) dengan rentang 92% - 100%
      *
      * @param Carbon $currentDate
      * @return float
@@ -113,26 +104,21 @@ class SensorReadingSeeder extends Seeder
     private function generateHumidityValue($currentDate)
     {
         $hour = $currentDate->hour;
-        $month = $currentDate->month;
+        $minute = $currentDate->minute;
 
-        // Faktor musiman untuk kelembapan (lebih lembap di musim hujan)
-        $seasonMultiplier = ($month >= 6 && $month <= 8) ? 0.85 : 1.15; // Musim hujan atau panas
+        // Rentang kelembaban antara 92% dan 100%
+        $minHumidity = 92;
+        $maxHumidity = 100;
 
-        // Pola harian lebih halus untuk kelembapan
-        if ($hour >= 6 && $hour <= 10) {
-            // Pagi hari: 65% - 85%
-            return round(rand(650, 850) / 10 * $seasonMultiplier, 1);
-        } elseif ($hour >= 11 && $hour <= 16) {
-            // Siang hari: 50% - 65%
-            return round(rand(500, 650) / 10 * $seasonMultiplier, 1);
-        } else {
-            // Malam hari: 60% - 80%
-            return round(rand(600, 800) / 10 * $seasonMultiplier, 1);
-        }
+        // Pola gradual naik turun kelembapan
+        $dailyVariation = sin(deg2rad(($hour * 60 + $minute) * (180 / (24 * 60)))) * 4;
+        $baseHumidity = ($maxHumidity + $minHumidity) / 2 + $dailyVariation;
+
+        return round($baseHumidity + rand(-0.5, 0.5), 1); // Variasi kecil untuk membuatnya lebih natural
     }
 
     /**
-     * Generate nilai lux (cahaya) dengan pola siang dan malam yang tajam
+     * Generate nilai lux (cahaya) dengan pola siang dan malam yang lebih realistis
      *
      * @param Carbon $currentDate
      * @return int
@@ -141,50 +127,57 @@ class SensorReadingSeeder extends Seeder
     {
         $hour = $currentDate->hour;
 
-        // Cahaya meningkat tajam pada siang hari
-        if ($hour >= 6 && $hour <= 18) {
+        // Pola siang dan malam untuk cahaya, dengan kandang tetap menyala di malam hari
+        if ($hour >= 6 && $hour <= 17) {
             // Siang hari: antara 1500 - 3000 lux
             return rand(1500, 3000);
         } else {
-            // Malam hari: sangat rendah atau nol
-            return rand(0, 10);
+            // Malam hari: lampu menyala, sekitar 200 - 500 lux
+            return rand(200, 500);
         }
     }
 
     /**
-     * Generate nilai amonia (ammonia) yang lebih lambat dan halus
+     * Generate nilai amonia (ammonia) yang meningkat seiring bertambahnya umur ayam
      *
      * @param Carbon $currentDate
+     * @param int $ageInDays
      * @return float
      */
-    private function generateAmoniaValue($currentDate)
+    private function generateAmoniaValue($currentDate, $ageInDays)
     {
-        // Menghasilkan tren lambat dengan variasi yang lebih halus
-        $baseAmonia = 10; // Nilai dasar
-        $variation = sin(deg2rad($currentDate->dayOfYear)) * 1.5; // Smoothing pola lambat sepanjang tahun
-        return round($baseAmonia + $variation + rand(-0.5, 0.5), 1); // Variasi lebih kecil
+        // Amonia meningkat seiring bertambahnya umur ayam (5 ppm di hari awal hingga 20 ppm di hari panen)
+        $minAmonia = 5; // Amonia terendah di awal
+        $maxAmonia = 20; // Amonia tertinggi di akhir periode
+
+        // Perubahan amonia berdasarkan umur ayam
+        $amoniaByAge = $minAmonia + ($maxAmonia - $minAmonia) * ($ageInDays / 40); // Linear increase by age
+
+        // Variasi harian kecil pada nilai amonia
+        $dailyVariation = rand(-0.5, 0.5);
+
+        return round($amoniaByAge + $dailyVariation, 1); // Variasi kecil untuk natural effect
     }
 
     /**
-     * Generate nilai kecepatan angin (wind speed) dengan pola musiman yang lebih landai
+     * Generate nilai kecepatan angin (wind speed) dengan rentang 16 mph - 19 mph
      *
      * @param Carbon $currentDate
      * @return float
      */
     private function generateWindSpeedValue($currentDate)
     {
-        $month = $currentDate->month;
+        $hour = $currentDate->hour;
+        $minute = $currentDate->minute;
 
-        // Pola musiman yang lebih halus untuk kecepatan angin
-        if ($month >= 6 && $month <= 8) {
-            // Musim angin kencang: lebih tinggi antara 13.0 - 18.0 kph
-            return round(13 + sin(deg2rad(($month - 6) * 30)) * 2.5, 1);
-        } elseif ($month >= 9 && $month <= 11) {
-            // Musim tenang: lebih rendah antara 10.0 - 14.0 kph
-            return round(10 + sin(deg2rad(($month - 9) * 30)) * 2.5, 1);
-        } else {
-            // Bulan lainnya: antara 8.0 - 12.0 kph
-            return round(8 + sin(deg2rad(($month - 3) * 30)) * 2.5, 1);
-        }
+        // Rentang kecepatan angin antara 16 mph dan 19 mph
+        $minWindSpeed = 16;
+        $maxWindSpeed = 19;
+
+        // Pola gradual naik turun kecepatan angin
+        $dailyVariation = sin(deg2rad(($hour * 60 + $minute) * (180 / (24 * 60)))) * 1.5;
+        $baseWindSpeed = ($maxWindSpeed + $minWindSpeed) / 2 + $dailyVariation;
+
+        return round($baseWindSpeed + rand(-0.2, 0.2), 1); // Variasi kecil untuk membuatnya lebih natural
     }
 }

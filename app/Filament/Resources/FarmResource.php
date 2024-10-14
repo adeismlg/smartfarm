@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class FarmResource extends Resource
 {
     protected static ?string $model = Farm::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack'; // Ikon untuk navigasi
+    protected static ?string $navigationIcon = 'heroicon-s-building-library'; // Ikon untuk navigasi
 
     public static function form(Form $form): Form
     {

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class ActuatorResource extends Resource
 {
     protected static ?string $model = Actuator::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-m-light-bulb';
 
     public static function form(Form $form): Form
     {
